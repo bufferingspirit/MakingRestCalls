@@ -5,10 +5,13 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.example.admin.makeingrestcalls.model.WeatherData;
 import com.google.gson.Gson;
+
 
 import java.io.IOException;
 
@@ -17,6 +20,10 @@ import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import rx.Observable;
+import rx.Subscriber;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -24,12 +31,16 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity" ;
 
     WeatherData weatherData;
+    ImageView imageview;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        imageview = (ImageView) findViewById(R.id.imageview);
+        Glide.with(this).load("https://static1.squarespace.com/static/54e8ba93e4b07c3f655b452e/t/56c2a04520c64707756f4267/1493764650017/").into(imageview);
     }
     String resultResponse = "";
     public void makingRestCalls(View view) throws IOException {
@@ -91,9 +102,47 @@ public class MainActivity extends AppCompatActivity {
 
             case R.id.btnRetrofit:
 
+                retrofit2.Call<WeatherData> weatherDataCall = RetrofitHelper.getWeatherCall();
+                weatherDataCall.enqueue(new retrofit2.Callback<WeatherData>() {
+                    @Override
+                    public void onResponse(retrofit2.Call<WeatherData> call, retrofit2.Response<WeatherData> response) {
+                        Log.d(TAG, "onResponse: " + response.body().getList().size());
+                    }
+
+                    @Override
+                    public void onFailure(retrofit2.Call<WeatherData> call, Throwable t) {
+                        Log.d(TAG, "onFailure: ");
+                    }
+                });
+
+                break;
+
+            case R.id.btnRetrofitRxJava:
+
+                Observable<WeatherData> weatherDataObservable = RetrofitHelper.getWeatherObs();
+                weatherDataObservable.subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Subscriber<WeatherData>() {
+                            @Override
+                            public void onCompleted() {
+                                Log.d(TAG, "onCompleted: ");
+                            }
+
+                            @Override
+                            public void onError(Throwable e) {
+                                Log.d(TAG, "onError: " + e.toString());
+                            }
+
+                            @Override
+                            public void onNext(WeatherData weatherData) {
+                                Log.d(TAG, "onNext: " + weatherData.getList().size());
+                            }
+                        });
+
                 break;
         }
     }
+}
 
     //http://www.mocky.io/v2/599495951100009403723127
-}
+
